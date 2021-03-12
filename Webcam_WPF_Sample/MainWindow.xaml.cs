@@ -136,17 +136,15 @@ namespace Webcam_WPF_Sample
                         // Update frame in UI thread
                         await Dispatcher.InvokeAsync(() =>
                         {
-                            WebcamImage.Source = workFrame.ToWriteableBitmap();
+                            WebcamImage.Source = workFrame.ToBitmapSource();
                         });
                     }
                 }
                 else
                 {
-                    // Display frame rate speed to get desired display frame rate
-                    var fpsDelay = fpsMilliseconds - (int)_fpsStopWatch.ElapsedMilliseconds;
-
-                    // We delay half the expected time to consider time spent executing other code
-                    if (fpsDelay > 0) await Task.Delay(fpsDelay /2);
+                    // Display frame rate speed to get desired display frame rate. We use half the expected time to consider time spent executing other code
+                    var fpsDelay = (fpsMilliseconds / 2) - (int)_fpsStopWatch.ElapsedMilliseconds;
+                    if (fpsDelay > 0) await Task.Delay(fpsDelay);
                 }
             }
 
