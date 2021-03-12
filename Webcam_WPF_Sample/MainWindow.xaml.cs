@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -20,13 +21,14 @@ using OpenCvSharp.WpfExtensions;
 
 namespace Webcam_WPF_Sample
 {
-    public partial class MainWindow : System.Windows.Window
+    public partial class MainWindow : System.Windows.Window, INotifyPropertyChanged
     {
+#pragma warning disable CS0067 // Event used by Fody
+        public event PropertyChangedEventHandler? PropertyChanged;
+#pragma warning restore CS0067 // Event used by Fody
+
         private CancellationTokenSource? _cts;
         private System.Diagnostics.Stopwatch _fpsStopWatch = new System.Diagnostics.Stopwatch();
-
-        // TODO: This should be implemented as binding with MVVM but I wanted to keep the sample simple
-        private bool FlipImage { get; set; }
 
         /// <summary>
         /// For multiples cameras specify index here.
@@ -38,9 +40,14 @@ namespace Webcam_WPF_Sample
         /// </summary>
         private const int MaxDisplayFrameRate = 30;
 
+        public bool FlipImage { get; set; }
+        public bool ApplyFilter { get; set; }
+        public int CurrentFPS { get; private set; }
+
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = this;
         }
 
         private async void WebcamStartButton_Click(object sender, RoutedEventArgs e)
@@ -91,6 +98,8 @@ namespace Webcam_WPF_Sample
             videoCapture.Open(CameraIndex);
             if (!videoCapture.IsOpened()) throw new ApplicationException("Could not open camera.");
 
+            var fpsCounter = new List<int>();
+
             // Grab
             using var frame = new Mat();
             while (!cancellationToken.IsCancellationRequested)
@@ -98,6 +107,17 @@ namespace Webcam_WPF_Sample
                 // Reduce the number of displayed images to a reasonable amount if the camera is acquiring images very fast.
                 if (!_fpsStopWatch.IsRunning || _fpsStopWatch.ElapsedMilliseconds > fpsMilliseconds)
                 {
+                    // Display FPS counter
+                    if (_fpsStopWatch.IsRunning)
+                    {
+                        fpsCounter.Add((int)Math.Ceiling((double)1000 / (int)_fpsStopWatch.ElapsedMilliseconds));
+                        if (fpsCounter.Count > MaxDisplayFrameRate / 2)
+                        {
+                            CurrentFPS = (int)Math.Ceiling(fpsCounter.Average());
+                            fpsCounter.Clear();
+                        }
+                    }
+
                     _fpsStopWatch.Restart();
 
                     // Get frame
@@ -106,7 +126,12 @@ namespace Webcam_WPF_Sample
                     if (!frame.Empty())
                     {
                         // Optional flip
-                        var workFrame = FlipImage ? frame.Flip(FlipMode.Y) : frame;
+                        Mat workFrame = FlipImage ? frame.Flip(FlipMode.Y) : frame;
+
+                        if (ApplyFilter)
+                        {
+                            workFrame = Filter_Canny(workFrame);
+                        }
 
                         // Update frame in UI thread
                         await Dispatcher.InvokeAsync(() =>
@@ -119,16 +144,19 @@ namespace Webcam_WPF_Sample
                 {
                     // Display frame rate speed to get desired display frame rate
                     var fpsDelay = fpsMilliseconds - (int)_fpsStopWatch.ElapsedMilliseconds;
-                    if (fpsDelay > 0) await Task.Delay(fpsDelay);
+
+                    // We delay half the expected time to consider time spent executing other code
+                    if (fpsDelay > 0) await Task.Delay(fpsDelay /2);
                 }
             }
 
             videoCapture.Release();
         }
 
-        // TODO: This should be implemented as binding with MVVM but I wanted to keep the sample simple
-        private void FlipImageCheckBox_Checked(object sender, RoutedEventArgs e) => FlipImage = true;
-        private void FlipImageCheckBox_Unchecked(object sender, RoutedEventArgs e) => FlipImage = false;
+        private Mat Filter_Canny(Mat image)
+        {
+            return image.Canny(100, 200);
+        }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {

@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Webcam_WPF_Sample"
         mc:Ignorable="d"
-        Title="Webcam WPF Sample" Height="450" Width="800" Closing="Window_Closing">
+        d:DataContext="{d:DesignInstance Type=local:MainWindow, IsDesignTimeCreatable=false}"
+        Title="Webcam WPF Sample" Height="850" Width="1000" Closing="Window_Closing">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -14,11 +15,16 @@
 
         <Image x:Name="WebcamImage" Grid.Row="0" Stretch="Uniform"/>
 
+        <StackPanel Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center">
+            <TextBlock Margin="10"><Run Text="{Binding CurrentFPS, Mode=OneWay}" /><Run Text=" fps"/></TextBlock>
+        </StackPanel>
+        
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
             <Button x:Name="WebcamStartButton" Content="Start" Margin="10" Padding="5" Click="WebcamStartButton_Click" />
             <Button x:Name="WebcamStopButton" Content="Stop"  Margin="10" Padding="5" Click="WebcamStopButton_Click" IsEnabled="False" />
 
-            <CheckBox x:Name="FlipImageCheckBox" Content="Flip image" Checked="FlipImageCheckBox_Checked" Unchecked="FlipImageCheckBox_Unchecked" VerticalAlignment="Center" Margin="10,0,0,0" />
+            <CheckBox x:Name="FlipImageCheckBox" Content="Flip image" IsChecked="{Binding FlipImage}" VerticalAlignment="Center" Margin="10,0,0,0" />
+            <CheckBox x:Name="ApplyFilterCheckBox" Content="Apply filter" IsChecked="{Binding ApplyFilter}" VerticalAlignment="Center" Margin="10,0,0,0" />
         </StackPanel>
     </Grid>
 </Window>
