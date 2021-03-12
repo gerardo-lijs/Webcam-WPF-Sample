@@ -23,6 +23,7 @@ namespace Webcam_WPF_Sample
     public partial class MainWindow : System.Windows.Window
     {
         private CancellationTokenSource? _cts;
+        private System.Diagnostics.Stopwatch _fpsStopWatch = new System.Diagnostics.Stopwatch();
 
         // TODO: This should be implemented as binding with MVVM but I wanted to keep the sample simple
         private bool FlipImage { get; set; }
@@ -33,10 +34,9 @@ namespace Webcam_WPF_Sample
         private const int CameraIndex = 0;
 
         /// <summary>
-        /// Frame rate used to grab video.
-        /// Value 0 means disabled = max frame rate possible
+        /// Frame rate used to display video.
         /// </summary>
-        private const int DisplayFrameRate = 30;
+        private const int MaxDisplayFrameRate = 30;
 
         public MainWindow()
         {
@@ -52,7 +52,6 @@ namespace Webcam_WPF_Sample
             {
                 _cts = new CancellationTokenSource();
                 await Task.Run(() => Start_CameraGrab(_cts.Token), _cts.Token);
-                //await Start_CameraGrab(_cts.Token);
             }
             catch (Exception ex)
             {
@@ -63,7 +62,9 @@ namespace Webcam_WPF_Sample
             WebcamStopButton.IsEnabled = false;
         }
 
-        private void WebcamStopButton_Click(object sender, RoutedEventArgs e)
+        private void WebcamStopButton_Click(object sender, RoutedEventArgs e) => WebcamStop();
+
+        private void WebcamStop()
         {
             try
             {
@@ -80,21 +81,24 @@ namespace Webcam_WPF_Sample
             }
         }
 
-        private System.Diagnostics.Stopwatch stopWatch = new System.Diagnostics.Stopwatch();
-
         private async Task Start_CameraGrab(CancellationToken cancellationToken)
         {
+            // FPS delay
+            var fpsMilliseconds = 1000 / MaxDisplayFrameRate;
+
+            // Init capture
             var videoCapture = new VideoCapture(CameraIndex);
             videoCapture.Open(CameraIndex);
             if (!videoCapture.IsOpened()) throw new ApplicationException("Could not open camera.");
 
+            // Grab
             using var frame = new Mat();
             while (!cancellationToken.IsCancellationRequested)
             {
                 // Reduce the number of displayed images to a reasonable amount if the camera is acquiring images very fast.
-                if (!stopWatch.IsRunning || stopWatch.ElapsedMilliseconds > 33)
+                if (!_fpsStopWatch.IsRunning || _fpsStopWatch.ElapsedMilliseconds > fpsMilliseconds)
                 {
-                    stopWatch.Restart();
+                    _fpsStopWatch.Restart();
 
                     // Get frame
                     videoCapture.Read(frame);
@@ -103,16 +107,6 @@ namespace Webcam_WPF_Sample
                     {
                         // Optional flip
                         var workFrame = FlipImage ? frame.Flip(FlipMode.Y) : frame;
-
-                        //using MemoryStream memoryStream = workFrame.ToMemoryStream();
-
-                        //var imageSource = new BitmapImage();
-
-                        //imageSource.BeginInit();
-                        //imageSource.CacheOption = BitmapCacheOption.OnLoad;
-                        //imageSource.StreamSource = memoryStream;
-                        //imageSource.EndInit();
-                        //imageSource.Freeze();
 
                         // Update frame in UI thread
                         await Dispatcher.InvokeAsync(() =>
@@ -123,8 +117,9 @@ namespace Webcam_WPF_Sample
                 }
                 else
                 {
-                    // Display frame rate speed to get 30 fps
-                    await Task.Delay(30);
+                    // Display frame rate speed to get desired display frame rate
+                    var fpsDelay = fpsMilliseconds - (int)_fpsStopWatch.ElapsedMilliseconds;
+                    if (fpsDelay > 0) await Task.Delay(fpsDelay);
                 }
             }
 
@@ -134,5 +129,10 @@ namespace Webcam_WPF_Sample
         // TODO: This should be implemented as binding with MVVM but I wanted to keep the sample simple
         private void FlipImageCheckBox_Checked(object sender, RoutedEventArgs e) => FlipImage = true;
         private void FlipImageCheckBox_Unchecked(object sender, RoutedEventArgs e) => FlipImage = false;
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            WebcamStop();
+        }
     }
 }
