@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -51,6 +52,7 @@ namespace Webcam_WPF_Sample
             {
                 _cts = new CancellationTokenSource();
                 await Task.Run(() => Start_CameraGrab(_cts.Token), _cts.Token);
+                //await Start_CameraGrab(_cts.Token);
             }
             catch (Exception ex)
             {
@@ -78,6 +80,8 @@ namespace Webcam_WPF_Sample
             }
         }
 
+        private System.Diagnostics.Stopwatch stopWatch = new System.Diagnostics.Stopwatch();
+
         private async Task Start_CameraGrab(CancellationToken cancellationToken)
         {
             var videoCapture = new VideoCapture(CameraIndex);
@@ -87,23 +91,41 @@ namespace Webcam_WPF_Sample
             using var frame = new Mat();
             while (!cancellationToken.IsCancellationRequested)
             {
-                // Get frame
-                videoCapture.Read(frame);
-
-                if (!frame.Empty())
+                // Reduce the number of displayed images to a reasonable amount if the camera is acquiring images very fast.
+                if (!stopWatch.IsRunning || stopWatch.ElapsedMilliseconds > 33)
                 {
-                    // Optional flip
-                    var workFrame = FlipImage ? frame.Flip(FlipMode.Y) : frame;
+                    stopWatch.Restart();
 
-                    // Update frame in UI thread
-                    WebcamImage.Dispatcher.Invoke(() =>
+                    // Get frame
+                    videoCapture.Read(frame);
+
+                    if (!frame.Empty())
                     {
-                        WebcamImage.Source = workFrame.ToWriteableBitmap();
-                    });
-                }
+                        // Optional flip
+                        var workFrame = FlipImage ? frame.Flip(FlipMode.Y) : frame;
 
-                // Display frame rate speed to get 30 fps
-                await Task.Delay(33);
+                        //using MemoryStream memoryStream = workFrame.ToMemoryStream();
+
+                        //var imageSource = new BitmapImage();
+
+                        //imageSource.BeginInit();
+                        //imageSource.CacheOption = BitmapCacheOption.OnLoad;
+                        //imageSource.StreamSource = memoryStream;
+                        //imageSource.EndInit();
+                        //imageSource.Freeze();
+
+                        // Update frame in UI thread
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            WebcamImage.Source = workFrame.ToWriteableBitmap();
+                        });
+                    }
+                }
+                else
+                {
+                    // Display frame rate speed to get 30 fps
+                    await Task.Delay(30);
+                }
             }
 
             videoCapture.Release();
