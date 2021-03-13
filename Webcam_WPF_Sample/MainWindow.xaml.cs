@@ -31,11 +31,6 @@ namespace Webcam_WPF_Sample
         private System.Diagnostics.Stopwatch _fpsStopWatch = new System.Diagnostics.Stopwatch();
 
         /// <summary>
-        /// For multiples cameras specify index here.
-        /// </summary>
-        private const int CameraIndex = 0;
-
-        /// <summary>
         /// Frame rate used to display video.
         /// </summary>
         private const int MaxDisplayFrameRate = 30;
@@ -44,10 +39,16 @@ namespace Webcam_WPF_Sample
         public bool ApplyFilter { get; set; }
         public int CurrentFPS { get; private set; }
 
+        public List<Helpers.CameraDevicesEnumerator.CameraDevice> CameraDevices { get; }
+        public Helpers.CameraDevicesEnumerator.CameraDevice? CameraDeviceSelected { get; set; }
+
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
+
+            CameraDevices = Helpers.CameraDevicesEnumerator.GetAllConnectedCameras().ToList();
+            CameraDeviceSelected = CameraDevices.FirstOrDefault();
         }
 
         private async void WebcamStartButton_Click(object sender, RoutedEventArgs e)
@@ -90,12 +91,15 @@ namespace Webcam_WPF_Sample
 
         private async Task Start_CameraGrab(CancellationToken cancellationToken)
         {
+            // Check
+            if (CameraDeviceSelected is null) throw new Exception("Camera device not selected.");
+
             // FPS delay
             var fpsMilliseconds = 1000 / MaxDisplayFrameRate;
 
             // Init capture
-            var videoCapture = new VideoCapture(CameraIndex);
-            videoCapture.Open(CameraIndex);
+            var videoCapture = new VideoCapture(CameraDeviceSelected.OpenCvId);
+            videoCapture.Open(CameraDeviceSelected.OpenCvId);
             if (!videoCapture.IsOpened()) throw new ApplicationException("Could not open camera.");
 
             var fpsCounter = new List<int>();

@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Webcam_WPF_Sample"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:MainWindow, IsDesignTimeCreatable=false}"
-        Title="Webcam WPF Sample" Height="850" Width="1000" Closing="Window_Closing">
+        Title="Webcam WPF Sample" Height="850" Width="1000" MinHeight="400" MinWidth="400" Closing="Window_Closing">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -16,6 +16,7 @@
         <Image x:Name="WebcamImage" Grid.Row="0" Stretch="Uniform"/>
 
         <StackPanel Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center">
+            <ComboBox x:Name="CameraDeviceComboBox" Margin="10,5,0,0" ItemsSource="{Binding CameraDevices, Mode=OneWay}" DisplayMemberPath="Name" SelectedItem="{Binding CameraDeviceSelected}" />
             <TextBlock Margin="10"><Run Text="{Binding CurrentFPS, Mode=OneWay}" /><Run Text=" fps"/></TextBlock>
         </StackPanel>
         
