@@ -1,20 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
@@ -28,14 +18,15 @@ namespace Webcam_WPF_Sample
 #pragma warning restore CS0067 // Event used by Fody
 
         private CancellationTokenSource? _cts;
-        private System.Diagnostics.Stopwatch _fpsStopWatch = new System.Diagnostics.Stopwatch();
+        private readonly System.Diagnostics.Stopwatch _fpsStopWatch = new System.Diagnostics.Stopwatch();
 
         /// <summary>
         /// Frame rate used to display video.
         /// </summary>
         private const int MaxDisplayFrameRate = 30;
 
-        public bool FlipImage { get; set; }
+        public bool FlipImageY { get; set; }
+        public bool FlipImageX { get; set; }
         public bool ApplyFilter { get; set; }
         public int CurrentFPS { get; private set; }
 
@@ -61,9 +52,13 @@ namespace Webcam_WPF_Sample
                 _cts = new CancellationTokenSource();
                 await Task.Run(() => Start_CameraGrab(_cts.Token), _cts.Token);
             }
+            catch (OperationCanceledException)
+            {
+                // Ignore cancel exception
+            }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.ToString(), "Camera exception", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowException(ex);
             }
 
             WebcamStartButton.IsEnabled = true;
@@ -85,7 +80,7 @@ namespace Webcam_WPF_Sample
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.ToString(), "Camera exception", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowException(ex);
             }
         }
 
@@ -98,9 +93,9 @@ namespace Webcam_WPF_Sample
             var fpsMilliseconds = 1000 / MaxDisplayFrameRate;
 
             // Init capture
-            var videoCapture = new VideoCapture(CameraDeviceSelected.OpenCvId);
-            videoCapture.Open(CameraDeviceSelected.OpenCvId);
-            if (!videoCapture.IsOpened()) throw new ApplicationException("Could not open camera.");
+            var videoCapture = new VideoCapture(CameraDeviceSelected.CameraIndex);
+            videoCapture.Open(CameraDeviceSelected.CameraIndex);
+            if (!videoCapture.IsOpened()) throw new Exception("Could not open camera.");
 
             var fpsCounter = new List<int>();
 
@@ -130,7 +125,8 @@ namespace Webcam_WPF_Sample
                     if (!frame.Empty())
                     {
                         // Optional flip
-                        Mat workFrame = FlipImage ? frame.Flip(FlipMode.Y) : frame;
+                        Mat workFrame = FlipImageY ? frame.Flip(FlipMode.Y) : frame;
+                        workFrame = FlipImageX ? workFrame.Flip(FlipMode.X) : workFrame;
 
                         if (ApplyFilter)
                         {
@@ -148,21 +144,26 @@ namespace Webcam_WPF_Sample
                 {
                     // Display frame rate speed to get desired display frame rate. We use half the expected time to consider time spent executing other code
                     var fpsDelay = (fpsMilliseconds / 2) - (int)_fpsStopWatch.ElapsedMilliseconds;
-                    if (fpsDelay > 0) await Task.Delay(fpsDelay);
+                    if (fpsDelay > 0) await Task.Delay(fpsDelay, CancellationToken.None);
                 }
             }
 
             videoCapture.Release();
         }
 
-        private Mat Filter_Canny(Mat image)
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            WebcamStop();
+        }
+
+        private static Mat Filter_Canny(Mat image)
         {
             return image.Canny(100, 200);
         }
 
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private static void ShowException(Exception ex)
         {
-            WebcamStop();
+            MessageBox.Show(ex.Message, "Webcam WPF Sample Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }

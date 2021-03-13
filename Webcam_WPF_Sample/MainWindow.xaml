@@ -21,10 +21,11 @@
         </StackPanel>
         
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
-            <Button x:Name="WebcamStartButton" Content="Start" Margin="10" Padding="5" Click="WebcamStartButton_Click" />
-            <Button x:Name="WebcamStopButton" Content="Stop"  Margin="10" Padding="5" Click="WebcamStopButton_Click" IsEnabled="False" />
+            <Button x:Name="WebcamStartButton" Content="Start" Margin="10" Padding="5" Click="WebcamStartButton_Click" MaxHeight="25" />
+            <Button x:Name="WebcamStopButton" Content="Stop"  Margin="10" Padding="5" Click="WebcamStopButton_Click" MaxHeight="25" IsEnabled="False" />
 
-            <CheckBox x:Name="FlipImageCheckBox" Content="Flip image" IsChecked="{Binding FlipImage}" VerticalAlignment="Center" Margin="10,0,0,0" />
+            <CheckBox x:Name="FlipImageYCheckBox" Content="Flip image Y" IsChecked="{Binding FlipImageY}" VerticalAlignment="Center" Margin="10,0,0,0" />
+            <CheckBox x:Name="FlipImageXCheckBox" Content="Flip image X" IsChecked="{Binding FlipImageX}" VerticalAlignment="Center" Margin="10,0,0,0" />
             <CheckBox x:Name="ApplyFilterCheckBox" Content="Apply filter" IsChecked="{Binding ApplyFilter}" VerticalAlignment="Center" Margin="10,0,0,0" />
         </StackPanel>
     </Grid>
