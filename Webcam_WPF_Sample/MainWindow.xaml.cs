@@ -134,7 +134,7 @@ namespace Webcam_WPF_Sample
                         }
 
                         // Update frame in UI thread
-                        await Dispatcher.InvokeAsync(() =>
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             WebcamImage.Source = workFrame.ToBitmapSource();
                         });
